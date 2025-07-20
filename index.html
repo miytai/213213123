@@ -16,6 +16,7 @@
         .text-container {
             line-height: 1.6;
             font-size: 18px;
+            white-space: pre-wrap;
         }
         .word {
             color: var(--tg-theme-link-color, #3390ec);
@@ -45,6 +46,8 @@
             border-radius: 12px;
             max-width: 400px;
             width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
         }
         .loading {
             display: none;
@@ -60,9 +63,9 @@
     <div class="modal" id="modal">
         <div class="modal-content">
             <h3 id="modalWord"></h3>
-            <p><strong>Transcription:</strong> <span id="modalTranscription"></span></p>
-            <p><strong>Translation:</strong> <span id="modalTranslation"></span></p>
-            <p><strong>Explanation:</strong> <span id="modalExplanation"></span></p>
+            <p><strong>Транскрипция:</strong> <span id="modalTranscription"></span></p>
+            <p><strong>Перевод:</strong> <span id="modalTranslation"></span></p>
+            <p><strong>Объяснение:</strong> <span id="modalExplanation"></span></p>
             <button onclick="closeModal()" style="
                 background: var(--tg-theme-button-color, #3390ec);
                 color: var(--tg-theme-button-text-color, #fff);
@@ -73,7 +76,7 @@
                 margin-top: 15px;
                 cursor: pointer;
             ">
-                Close
+                Закрыть
             </button>
         </div>
     </div>
@@ -83,13 +86,13 @@
         tg.expand();
         tg.enableClosingConfirmation();
 
-        // Get text from URL
+        // Получаем текст из URL
         const urlParams = new URLSearchParams(window.location.search);
         const text = decodeURIComponent(urlParams.get('text') || "שלום עולם");
         
-        // Display clickable words
+        // Отображаем текст с кликабельными словами
         const container = document.getElementById('textContainer');
-        const words = text.split(/([\w']+)/);
+        const words = text.split(/([\w']+|[^\w']+)/);
         
         words.forEach((word) => {
             if (/[\w']+/.test(word)) {
@@ -111,13 +114,16 @@
             modal.style.display = 'none';
             
             try {
-                const response = await fetch('http://localhost:8000/api/analyze', {
+                // Используем Flask эндпоинт
+                const response = await fetch('http://localhost:5000/mini-app-api/analyze', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({word: word})
                 });
                 
-                if (!response.ok) throw new Error('API request failed');
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
                 
                 const data = await response.json();
                 
@@ -128,7 +134,7 @@
                 
                 modal.style.display = 'flex';
             } catch (error) {
-                tg.showAlert(`Error: ${error.message}`);
+                tg.showAlert(`Ошибка: ${error.message}`);
             } finally {
                 loading.style.display = 'none';
             }
