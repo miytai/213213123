@@ -33,7 +33,7 @@
             right: 0;
             bottom: 0;
             background: rgba(0,0,0,0.5);
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
             z-index: 1000;
@@ -57,7 +57,7 @@
     <div class="text-container" id="textContainer"></div>
     <div class="loading" id="loading">Loading...</div>
 
-    <div class="modal" id="modal" style="display: none;">
+    <div class="modal" id="modal">
         <div class="modal-content">
             <h3 id="modalWord"></h3>
             <p><strong>Transcription:</strong> <span id="modalTranscription"></span></p>
@@ -111,8 +111,7 @@
             modal.style.display = 'none';
             
             try {
-                // Replace with your actual server URL
-                const response = await fetch('https://your-server.com/api/analyze', {
+                const response = await fetch('http://localhost:8000/api/analyze', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({word: word})
@@ -123,9 +122,9 @@
                 const data = await response.json();
                 
                 document.getElementById('modalWord').textContent = word;
-                document.getElementById('modalTranscription').textContent = data.transcription;
-                document.getElementById('modalTranslation').textContent = data.translation;
-                document.getElementById('modalExplanation').textContent = data.explanation;
+                document.getElementById('modalTranscription').textContent = data.transcription || 'N/A';
+                document.getElementById('modalTranslation').textContent = data.translation || 'N/A';
+                document.getElementById('modalExplanation').textContent = data.explanation || 'N/A';
                 
                 modal.style.display = 'flex';
             } catch (error) {
