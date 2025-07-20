@@ -1,73 +1,142 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hebrew Mini App</title>
+    <title>Hebrew Analyzer</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
+            margin: 0;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #222);
+        }
+        .text-container {
+            line-height: 1.6;
+            font-size: 18px;
         }
         .word {
-            color: #3390ec;
+            color: var(--tg-theme-link-color, #3390ec);
             cursor: pointer;
             padding: 2px 4px;
+            border-radius: 4px;
         }
         .word:hover {
             background: rgba(51, 144, 236, 0.1);
         }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .modal-content {
+            background: var(--tg-theme-bg-color, #fff);
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 100%;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
-    <div id="text"></div>
+    <div class="text-container" id="textContainer"></div>
+    <div class="loading" id="loading">Loading...</div>
+
+    <div class="modal" id="modal" style="display: none;">
+        <div class="modal-content">
+            <h3 id="modalWord"></h3>
+            <p><strong>Transcription:</strong> <span id="modalTranscription"></span></p>
+            <p><strong>Translation:</strong> <span id="modalTranslation"></span></p>
+            <p><strong>Explanation:</strong> <span id="modalExplanation"></span></p>
+            <button onclick="closeModal()" style="
+                background: var(--tg-theme-button-color, #3390ec);
+                color: var(--tg-theme-button-text-color, #fff);
+                border: none;
+                padding: 10px;
+                border-radius: 8px;
+                width: 100%;
+                margin-top: 15px;
+                cursor: pointer;
+            ">
+                Close
+            </button>
+        </div>
+    </div>
 
     <script>
-        const tg = WebApp;
+        const tg = window.Telegram.WebApp;
         tg.expand();
+        tg.enableClosingConfirmation();
+
+        // Get text from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const text = decodeURIComponent(urlParams.get('text') || "שלום עולם");
         
-        // Получаем текст из URL
-        const url = new URL(window.location.href);
-        const text = url.searchParams.get('text') || "שלום עולם";
-        
-        // Отображаем текст с кликабельными словами
+        // Display clickable words
+        const container = document.getElementById('textContainer');
         const words = text.split(/([\w']+)/);
-        const textEl = document.getElementById('text');
         
-        words.forEach(word => {
+        words.forEach((word) => {
             if (/[\w']+/.test(word)) {
                 const span = document.createElement('span');
                 span.className = 'word';
                 span.textContent = word;
                 span.onclick = () => analyzeWord(word);
-                textEl.appendChild(span);
+                container.appendChild(span);
             } else {
-                textEl.appendChild(document.createTextNode(word));
+                container.appendChild(document.createTextNode(word));
             }
         });
-        
+
         async function analyzeWord(word) {
-            tg.showPopup({
-                title: 'Analyzing...',
-                message: `Word: ${word}`
-            }, () => {});
+            const loading = document.getElementById('loading');
+            const modal = document.getElementById('modal');
+            
+            loading.style.display = 'block';
+            modal.style.display = 'none';
             
             try {
+                // Replace with your actual server URL
                 const response = await fetch('https://your-server.com/api/analyze', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ word })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({word: word})
                 });
+                
+                if (!response.ok) throw new Error('API request failed');
                 
                 const data = await response.json();
                 
-                tg.showAlert(`Word: ${word}\n\nTranslation: ${data.translation}\n\nExplanation: ${data.explanation}`);
+                document.getElementById('modalWord').textContent = word;
+                document.getElementById('modalTranscription').textContent = data.transcription;
+                document.getElementById('modalTranslation').textContent = data.translation;
+                document.getElementById('modalExplanation').textContent = data.explanation;
+                
+                modal.style.display = 'flex';
             } catch (error) {
                 tg.showAlert(`Error: ${error.message}`);
+            } finally {
+                loading.style.display = 'none';
             }
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
         }
     </script>
 </body>
