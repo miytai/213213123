@@ -2,147 +2,67 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hebrew Word Analyzer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hebrew Mini App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --primary: #3390ec;
-            --text: #333;
-            --bg: #f5f5f5;
-            --card: #fff;
-            --radius: 12px;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
         body {
-            font-family: -apple-system, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 16px;
-            line-height: 1.5;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            line-height: 1.6;
         }
-
-        .container {
-            max-width: 100%;
-        }
-
-        .text-display {
-            background: rgba(51, 144, 236, 0.05);
-            padding: 16px;
-            border-radius: var(--radius);
-            margin-bottom: 20px;
-            font-size: 18px;
-        }
-
         .word {
-            color: var(--primary);
-            font-weight: 500;
+            color: #3390ec;
             cursor: pointer;
-            padding: 2px;
+            margin: 0 2px;
+            padding: 2px 4px;
             border-radius: 4px;
         }
-
         .word:hover {
             background: rgba(51, 144, 236, 0.1);
         }
-
         .modal {
-            display: none;
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
             background: rgba(0,0,0,0.5);
-            z-index: 100;
+            display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 100;
         }
-
         .modal-content {
-            background: var(--card);
+            background: white;
             padding: 20px;
-            border-radius: var(--radius);
+            border-radius: 12px;
             width: 90%;
             max-width: 400px;
-            animation: fadeIn 0.3s;
         }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .modal h3 {
-            color: var(--primary);
-            margin-bottom: 12px;
-        }
-
-        .modal p {
-            margin-bottom: 8px;
-        }
-
         .loading {
             display: none;
             text-align: center;
             padding: 20px;
         }
-
-        .spinner {
-            width: 24px;
-            height: 24px;
-            border: 3px solid rgba(51,144,236,0.2);
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Темная тема */
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --text: #e1e1e1;
-                --bg: #1e1e1e;
-                --card: #2d2d2d;
-            }
-        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="text-display" id="textDisplay"></div>
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Анализируем слово...</p>
-        </div>
+    <div id="textDisplay"></div>
+    <div id="loading" class="loading">
+        <div>Загрузка...</div>
     </div>
 
-    <div class="modal" id="wordModal">
+    <div id="modal" class="modal" style="display: none;">
         <div class="modal-content">
             <h3 id="modalWord"></h3>
             <p><strong>Транскрипция:</strong> <span id="modalTranscription"></span></p>
             <p><strong>Перевод:</strong> <span id="modalTranslation"></span></p>
             <p><strong>Объяснение:</strong> <span id="modalExplanation"></span></p>
-            <button onclick="closeModal()" style="
-                background: var(--primary);
-                color: white;
-                border: none;
-                padding: 8px 16px;
-                border-radius: var(--radius);
-                margin-top: 16px;
-                width: 100%;
-                cursor: pointer;
-            ">Закрыть</button>
+            <button onclick="document.getElementById('modal').style.display = 'none'" 
+                    style="margin-top: 15px; padding: 8px 15px; background: #3390ec; color: white; border: none; border-radius: 5px;">
+                Закрыть
+            </button>
         </div>
     </div>
 
@@ -152,14 +72,13 @@
         
         // Получаем текст из URL
         const urlParams = new URLSearchParams(window.location.search);
-        let text = urlParams.get('text') || "שלום! אני הבוט שלך ללימוד עברית";
-        text = decodeURIComponent(text);
+        let text = urlParams.get('text') || "שלום עולם";
         
-        // Отображаем текст с кликабельными словами
+        // Разбиваем текст на слова и делаем их кликабельными
         const textDisplay = document.getElementById('textDisplay');
         const words = text.split(/([\w']+)/);
         
-        words.forEach((word) => {
+        words.forEach((word, index) => {
             if (/[\w']+/.test(word)) {
                 const span = document.createElement('span');
                 span.className = 'word';
@@ -171,48 +90,35 @@
             }
         });
         
-        // Анализ слова
+        // Функция анализа слова
         async function analyzeWord(word) {
             const loading = document.getElementById('loading');
+            const modal = document.getElementById('modal');
+            
             loading.style.display = 'block';
             
             try {
-                const response = await fetch('https://your-server.com/api/analyze', {
+                const response = await fetch('http://localhost:8000/api/analyze', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ word })
+                    body: JSON.stringify({ word: word })
                 });
                 
-                if (!response.ok) throw new Error('Ошибка запроса');
-                
                 const data = await response.json();
-                showModal(word, data);
+                
+                document.getElementById('modalWord').textContent = word;
+                document.getElementById('modalTranscription').textContent = data.transcription;
+                document.getElementById('modalTranslation').textContent = data.translation;
+                document.getElementById('modalExplanation').textContent = data.explanation;
+                
+                modal.style.display = 'flex';
             } catch (error) {
-                tg.showAlert(`Ошибка: ${error.message}`);
+                tg.showAlert('Ошибка при анализе слова: ' + error.message);
             } finally {
                 loading.style.display = 'none';
             }
-        }
-        
-        // Показать модальное окно
-        function showModal(word, data) {
-            document.getElementById('modalWord').textContent = word;
-            document.getElementById('modalTranscription').textContent = data.transcription || 'N/A';
-            document.getElementById('modalTranslation').textContent = data.translation || 'N/A';
-            document.getElementById('modalExplanation').textContent = data.explanation || 'N/A';
-            document.getElementById('wordModal').style.display = 'flex';
-        }
-        
-        // Закрыть модальное окно
-        function closeModal() {
-            document.getElementById('wordModal').style.display = 'none';
-        }
-        
-        // Закрыть Mini App
-        function closeMiniApp() {
-            tg.close();
         }
     </script>
 </body>
