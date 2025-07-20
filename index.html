@@ -1,148 +1,60 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hebrew Word Analyzer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hebrew Mini App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 16px;
-            background-color: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #000000);
-            line-height: 1.5;
-        }
-        .text-display {
-            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            padding: 16px;
-            border-radius: 12px;
-            margin-bottom: 16px;
-            font-size: 18px;
-            line-height: 1.6;
+            font-family: Arial, sans-serif;
+            padding: 20px;
         }
         .word {
-            color: var(--tg-theme-link-color, #3390ec);
-            font-weight: 500;
+            color: #3390ec;
             cursor: pointer;
             padding: 2px 4px;
-            border-radius: 4px;
-            display: inline-block;
-            margin: 2px 0;
         }
         .word:hover {
-            background-color: rgba(51, 144, 236, 0.1);
-        }
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            padding: 16px;
-        }
-        .modal-content {
-            background: var(--tg-theme-bg-color, #ffffff);
-            padding: 20px;
-            border-radius: 12px;
-            width: 100%;
-            max-width: 400px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 20px;
-        }
-        .spinner {
-            width: 24px;
-            height: 24px;
-            border: 3px solid rgba(51, 144, 236, 0.2);
-            border-top-color: var(--tg-theme-link-color, #3390ec);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .close-btn {
-            background: var(--tg-theme-button-color, #3390ec);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            border: none;
-            padding: 10px 16px;
-            border-radius: 6px;
-            margin-top: 16px;
-            width: 100%;
-            font-weight: 500;
-            cursor: pointer;
+            background: rgba(51, 144, 236, 0.1);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="text-display" id="textDisplay"></div>
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Анализируем слово...</p>
-        </div>
-    </div>
-
-    <div class="modal" id="wordModal" style="display: none;">
-        <div class="modal-content">
-            <h3 id="modalWord"></h3>
-            <p><strong>Транскрипция:</strong> <span id="modalTranscription"></span></p>
-            <p><strong>Перевод:</strong> <span id="modalTranslation"></span></p>
-            <p><strong>Объяснение:</strong> <span id="modalExplanation"></span></p>
-            <button class="close-btn" onclick="closeModal()">Закрыть</button>
-        </div>
-    </div>
+    <div id="text"></div>
 
     <script>
-        const tg = window.Telegram.WebApp;
+        const tg = WebApp;
         tg.expand();
-        tg.enableClosingConfirmation();
         
-        // Получаем текст из URL параметров
-        const urlParams = new URLSearchParams(window.location.search);
-        let text = urlParams.get('text') || "שלום! אני הבוט שלך ללימוד עברית";
-        text = decodeURIComponent(text);
+        // Получаем текст из URL
+        const url = new URL(window.location.href);
+        const text = url.searchParams.get('text') || "שלום עולם";
         
-        // Разбиваем текст на слова и делаем их кликабельными
-        const textDisplay = document.getElementById('textDisplay');
-        const words = text.split(/([\w']+|[^\w']+)/);
+        // Отображаем текст с кликабельными словами
+        const words = text.split(/([\w']+)/);
+        const textEl = document.getElementById('text');
         
-        words.forEach((word) => {
+        words.forEach(word => {
             if (/[\w']+/.test(word)) {
                 const span = document.createElement('span');
                 span.className = 'word';
                 span.textContent = word;
                 span.onclick = () => analyzeWord(word);
-                textDisplay.appendChild(span);
+                textEl.appendChild(span);
             } else {
-                textDisplay.appendChild(document.createTextNode(word));
+                textEl.appendChild(document.createTextNode(word));
             }
         });
         
-        // Функция анализа слова
         async function analyzeWord(word) {
-            const loading = document.getElementById('loading');
-            const modal = document.getElementById('wordModal');
-            
-            // Показываем индикатор загрузки
-            loading.style.display = 'block';
-            modal.style.display = 'none';
+            tg.showPopup({
+                title: 'Analyzing...',
+                message: `Word: ${word}`
+            }, () => {});
             
             try {
-                // Отправляем запрос к API бота
-                const response = await fetch('http://localhost:8000/api/analyze', {
+                const response = await fetch('https://your-server.com/api/analyze', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -150,42 +62,12 @@
                     body: JSON.stringify({ word })
                 });
                 
-                if (!response.ok) {
-                    throw new Error('Ошибка сервера');
-                }
-                
                 const data = await response.json();
                 
-                // Заполняем модальное окно данными
-                document.getElementById('modalWord').textContent = word;
-                document.getElementById('modalTranscription').textContent = data.transcription || 'Не доступно';
-                document.getElementById('modalTranslation').textContent = data.translation || 'Не доступно';
-                document.getElementById('modalExplanation').textContent = data.explanation || 'Не доступно';
-                
-                // Показываем модальное окно
-                modal.style.display = 'flex';
+                tg.showAlert(`Word: ${word}\n\nTranslation: ${data.translation}\n\nExplanation: ${data.explanation}`);
             } catch (error) {
-                tg.showAlert(`Ошибка: ${error.message}`);
-            } finally {
-                loading.style.display = 'none';
+                tg.showAlert(`Error: ${error.message}`);
             }
-        }
-        
-        // Закрытие модального окна
-        function closeModal() {
-            document.getElementById('wordModal').style.display = 'none';
-        }
-        
-        // Обработка изменения темы Telegram
-        tg.onEvent('themeChanged', () => {
-            document.body.style.backgroundColor = tg.themeParams.bg_color || '#ffffff';
-            document.body.style.color = tg.themeParams.text_color || '#000000';
-        });
-        
-        // Применяем текущую тему при загрузке
-        if (tg.colorScheme) {
-            document.body.style.backgroundColor = tg.themeParams.bg_color || '#ffffff';
-            document.body.style.color = tg.themeParams.text_color || '#000000';
         }
     </script>
 </body>
